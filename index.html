@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#12132a">
+<title>SleepInsight</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<style>
+  :root{
+    --navy-deep:#12132A;
+    --navy-surface:#1C1E3A;
+    --navy-line:#2A2D5C;
+    --blue:#4A6CF7;
+    --purple:#8B5CF6;
+    --dawn-peach:#F5B98C;
+    --dawn-pink:#F2778A;
+    --off-white:#F8F9FF;
+    --muted:#8B8FB8;
+    --good:#5FD8A6;
+    --warn:#F2A65A;
+    --bad:#F2778A;
+    --radius:18px;
+    --font-display:'Space Grotesk', 'Inter', sans-serif;
+    --font-body:'Inter', -apple-system, sans-serif;
+    --font-mono:'JetBrains Mono', 'SF Mono', monospace;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    background:radial-gradient(120% 100% at 50% 0%, #1a1c3d 0%, var(--navy-deep) 55%);
+    color:var(--off-white);
+    font-family:var(--font-body);
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+  }
+  @font-face{font-family:'Space Grotesk';src:local('Space Grotesk');}
+  #app{
+    width:100%;
+    max-width:480px;
+    min-height:100vh;
+    padding:20px 18px 100px;
+    position:relative;
+  }
+  .top-greeting{
+    font-family:var(--font-display);
+    font-size:15px;
+    color:var(--muted);
+    letter-spacing:.02em;
+    margin-bottom:2px;
+  }
+  .top-date{
+    font-family:var(--font-mono);
+    font-size:13px;
+    color:var(--muted);
+    margin-bottom:18px;
+  }
+
+  /* Day ring */
+  .ring-wrap{
+    position:relative;
+    width:220px;height:220px;
+    margin:8px auto 22px;
+  }
+  .ring-bg{
+    position:absolute;inset:0;border-radius:50%;
+    background:conic-gradient(from 0deg,
+      #14163a 0deg, #14163a 40deg,
+      var(--purple) 70deg,
+      var(--dawn-pink) 95deg,
+      var(--dawn-peach) 115deg,
+      #cfe0ff 150deg, #cfe0ff 210deg,
+      var(--dawn-peach) 245deg,
+      var(--dawn-pink) 265deg,
+      var(--purple) 290deg,
+      #14163a 320deg, #14163a 360deg);
+    filter:saturate(0.9);
+  }
+  .ring-mask{
+    position:absolute; inset:14px; border-radius:50%;
+    background:var(--navy-deep);
+    box-shadow:inset 0 0 30px rgba(0,0,0,.4);
+  }
+  .ring-svg{position:absolute;inset:0;transform:rotate(-90deg);}
+  .ring-center{
+    position:absolute;inset:0;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;
+  }
+  .ring-center .big{font-family:var(--font-display);font-size:28px;font-weight:600;}
+  .ring-center .small{font-family:var(--font-mono);font-size:12px;color:var(--muted);margin-top:2px;}
+  .time-marker{
+    position:absolute; top:50%; left:50%;
+    width:10px;height:10px;border-radius:50%;
+    background:#fff; box-shadow:0 0 10px 2px rgba(255,255,255,.7);
+    margin:-5px;
+    transform-origin:5px 5px;
+  }
+
+  /* Cards */
+  .card{
+    background:var(--navy-surface);
+    border:1px solid var(--navy-line);
+    border-radius:var(--radius);
+    padding:18px;
+    margin-bottom:14px;
+  }
+  .card.cta{
+    background:linear-gradient(135deg, rgba(74,108,247,.18), rgba(139,92,246,.12));
+    border:1px solid rgba(139,92,246,.35);
+  }
+  .cta-label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;}
+  .cta-title{font-family:var(--font-display);font-size:19px;font-weight:600;margin-bottom:12px;}
+  .row{display:flex;gap:10px;}
+  .stat{flex:1;text-align:center;}
+  .stat .v{font-family:var(--font-mono);font-size:20px;font-weight:600;}
+  .stat .l{font-size:11px;color:var(--muted);margin-top:2px;}
+
+  button{font-family:var(--font-body);border:none;cursor:pointer;}
+  .btn-primary{
+    width:100%;padding:15px;border-radius:14px;
+    background:var(--blue);color:#fff;font-weight:600;font-size:15px;
+  }
+  .btn-primary:active{background:#3d5cf0;}
+  .btn-ghost{
+    width:100%;padding:13px;border-radius:14px;
+    background:transparent;border:1px solid var(--navy-line);color:var(--off-white);font-size:14px;
+  }
+  .btn-back{background:transparent;color:var(--muted);font-size:14px;padding:8px 0;}
+
+  /* Nav */
+  .tabbar{
+    position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+    width:100%;max-width:480px;
+    background:rgba(28,30,58,.92);backdrop-filter:blur(10px);
+    border-top:1px solid var(--navy-line);
+    display:flex;padding:10px 18px calc(10px + env(safe-area-inset-bottom));
+  }
+  .tab{flex:1;text-align:center;color:var(--muted);font-size:11px;padding:6px 0;border-radius:10px;}
+  .tab.active{color:var(--off-white);}
+  .tab .ic{font-size:18px;display:block;margin-bottom:2px;}
+
+  /* Form step */
+  .step-progress{display:flex;gap:5px;margin-bottom:16px;}
+  .step-dot{flex:1;height:4px;border-radius:2px;background:var(--navy-line);}
+  .step-dot.done{background:var(--blue);}
+  .field{margin-bottom:20px;}
+  .field label{display:block;font-size:13px;color:var(--muted);margin-bottom:8px;}
+  input[type=time], input[type=number], input[type=text]{
+    width:100%;padding:12px 14px;border-radius:12px;
+    background:var(--navy-deep);border:1px solid var(--navy-line);
+    color:var(--off-white);font-family:var(--font-mono);font-size:16px;
+  }
+  .seg{display:flex;gap:8px;}
+  .seg-btn{
+    flex:1;padding:12px 6px;border-radius:12px;
+    background:var(--navy-deep);border:1px solid var(--navy-line);
+    color:var(--off-white);font-size:13px;text-align:center;
+  }
+  .seg-btn.sel{background:var(--blue);border-color:var(--blue);font-weight:600;}
+  .scale5{display:flex;gap:6px;}
+  .scale5 .dot{
+    flex:1;aspect-ratio:1;border-radius:12px;
+    background:var(--navy-deep);border:1px solid var(--navy-line);
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--font-mono);font-size:15px;color:var(--muted);
+  }
+  .scale5 .dot.sel{background:var(--purple);border-color:var(--purple);color:#fff;font-weight:700;}
+  .stepper-num{display:flex;align-items:center;gap:12px;}
+  .stepper-num button{
+    width:40px;height:40px;border-radius:10px;background:var(--navy-deep);
+    border:1px solid var(--navy-line);color:var(--off-white);font-size:18px;
+  }
+  .stepper-num .val{flex:1;text-align:center;font-family:var(--font-mono);font-size:18px;}
+  .subfield{margin-top:10px;padding-top:10px;border-top:1px dashed var(--navy-line);}
+  .hint{font-size:11px;color:var(--muted);margin-top:6px;}
+
+  /* History */
+  .hist-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--navy-line);}
+  .hist-date{font-family:var(--font-mono);font-size:12px;color:var(--muted);width:52px;}
+  .hist-bar-wrap{flex:1;height:8px;background:var(--navy-deep);border-radius:4px;overflow:hidden;}
+  .hist-bar{height:100%;border-radius:4px;}
+  .hist-q{font-family:var(--font-mono);font-size:12px;width:26px;text-align:right;}
+  .chip{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;background:var(--navy-deep);color:var(--muted);margin-right:6px;margin-top:6px;}
+
+  .empty{text-align:center;color:var(--muted);font-size:13px;padding:30px 10px;}
+  .section-title{font-family:var(--font-display);font-size:15px;font-weight:600;margin:22px 0 10px;color:var(--off-white);}
+  ::selection{background:var(--purple);}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+/* ---------------- Backend sync config ---------------- */
+// Dán URL deployment Apps Script (dạng https://script.google.com/macros/s/XXXX/exec) vào đây.
+// Để trống '' nếu chỉ muốn dùng offline (localStorage only).
+const CONFIG = { API_URL: 'https://script.google.com/macros/s/AKfycbyrgeZvwjL1VQtSk3DpxZWcGFbuun0BSGaRHJ-jhFIrjCROMOVOHlD2_YwM3bocpWEw6g/exec' };
+
+async function pushToBackend(record){
+  if(!CONFIG.API_URL) return;
+  try{
+    await fetch(CONFIG.API_URL, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'}, // tránh CORS preflight với Apps Script
+      body: JSON.stringify(record)
+    });
+  }catch(err){ console.warn('Sync lên Sheets thất bại, sẽ thử lại lần sau', err); }
+}
+
+async function pullFromBackend(){
+  if(!CONFIG.API_URL) return false;
+  try{
+    const res = await fetch(CONFIG.API_URL);
+    const remote = await res.json();
+    const local = loadLogs();
+    remote.forEach(r=>{
+      if(!r.date) return;
+      // ưu tiên bản local nếu đã có (tránh ghi đè chỉnh sửa chưa kịp sync),
+      // chỉ bổ sung record nào local chưa có
+      if(!local[r.date]) local[r.date] = r;
+    });
+    saveLogs(local);
+    return true;
+  }catch(err){ console.warn('Kéo dữ liệu từ Sheets thất bại', err); return false; }
+}
+
+/* ---------------- Data layer ---------------- */
+const STORE_KEY = 'sleepinsight_logs_v1';
+const TARGET_SLEEP_H = 7.5;
+
+function loadLogs(){
+  try{ return JSON.parse(localStorage.getItem(STORE_KEY) || '{}'); }catch(e){ return {}; }
+}
+function saveLogs(logs){ localStorage.setItem(STORE_KEY, JSON.stringify(logs)); }
+function getLog(dateKey){ const L=loadLogs(); return L[dateKey] || {date:dateKey}; }
+function setLog(dateKey, patch){
+  const L=loadLogs();
+  const merged = Object.assign({date:dateKey}, L[dateKey]||{}, patch);
+  L[dateKey] = merged;
+  saveLogs(L);
+  pushToBackend(merged);
+}
+function fmtDateKey(d){
+  const p=n=>String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;
+}
+function addDays(d,n){ const r=new Date(d); r.setDate(r.getDate()+n); return r; }
+function todayKey(){ return fmtDateKey(new Date()); }
+function yesterdayKey(){ return fmtDateKey(addDays(new Date(),-1)); }
+
+// which sessionKey is "tonight" (shifts before 4am to previous date)
+function eveningSessionKey(){
+  const h = new Date().getHours();
+  return h < 4 ? yesterdayKey() : todayKey();
+}
+
+function findPending(){
+  const logs = loadLogs();
+  const keys = Object.keys(logs).sort();
+  // pending morning: most recent session with evening filled, no morning
+  for(let i=keys.length-1;i>=0;i--){
+    const k=keys[i], l=logs[k];
+    if(l.eveningDone && !l.morningDone) return {type:'morning', key:k};
+  }
+  for(let i=keys.length-1;i>=0;i--){
+    const k=keys[i], l=logs[k];
+    if(l.morningDone && !l.eodDone) return {type:'eod', key:k};
+  }
+  return null;
+}
+
+function decideContext(){
+  const h = new Date().getHours();
+  const pending = findPending();
+  if(pending) return pending;
+  const evKey = eveningSessionKey();
+  const evLog = getLog(evKey);
+  if(!evLog.eveningDone && (h>=18 || h<4)) return {type:'evening', key:evKey};
+  if(!evLog.eveningDone) return {type:'evening_early', key:evKey}; // daytime, not yet evening but nothing pending
+  return {type:'done'};
+}
+
+/* ---------------- Router ---------------- */
+let route = {name:'home'};
+function nav(r){ route=r; render(); window.scrollTo(0,0); }
+
+function render(){
+  const app = document.getElementById('app');
+  app.innerHTML = '';
+  if(route.name==='home') app.append(renderHome());
+  else if(route.name==='evening') app.append(renderEveningForm(route.key));
+  else if(route.name==='morning') app.append(renderMorningForm(route.key));
+  else if(route.name==='eod') app.append(renderEodForm(route.key));
+  else if(route.name==='history') app.append(renderHistory());
+  app.append(renderTabbar());
+}
+
+/* ---------------- Day ring ---------------- */
+function dayRing(highlightLog){
+  const wrap = el('div','ring-wrap');
+  wrap.innerHTML = `<div class="ring-bg"></div><div class="ring-mask"></div>`;
+  const now = new Date();
+  const marker = el('div','time-marker');
+  const minutesNow = now.getHours()*60+now.getMinutes();
+  const angNow = (minutesNow/1440)*360;
+  marker.style.transform = `rotate(${angNow}deg) translate(105px)`;
+  wrap.appendChild(marker);
+
+  // highlight arc for last sleep window
+  if(highlightLog && highlightLog.bedtime && highlightLog.wakeTime){
+    const svgNS="http://www.w3.org/2000/svg";
+    const svg=document.createElementNS(svgNS,'svg');
+    svg.setAttribute('viewBox','0 0 220 220');
+    svg.classList.add('ring-svg');
+    const r=100, cx=110, cy=110;
+    const [bh,bm]=highlightLog.bedtime.split(':').map(Number);
+    let [wh,wm]=highlightLog.wakeTime.split(':').map(Number);
+    let start=(bh*60+bm)/1440*360;
+    let end=(wh*60+wm)/1440*360;
+    if(end<start) end+=360;
+    const circumf=2*Math.PI*r;
+    const arcLen=(end-start)/360*circumf;
+    const circle=document.createElementNS(svgNS,'circle');
+    circle.setAttribute('cx',cx);circle.setAttribute('cy',cy);circle.setAttribute('r',r);
+    circle.setAttribute('fill','none');
+    circle.setAttribute('stroke','#ffffff');
+    circle.setAttribute('stroke-width','5');
+    circle.setAttribute('stroke-linecap','round');
+    circle.setAttribute('stroke-dasharray',`${arcLen} ${circumf-arcLen}`);
+    circle.setAttribute('stroke-dashoffset', -(start/360*circumf));
+    circle.setAttribute('opacity','0.85');
+    svg.appendChild(circle);
+    wrap.appendChild(svg);
+  }
+
+  const center = el('div','ring-center');
+  const durTxt = (highlightLog && highlightLog.durationH)? highlightLog.durationH.toFixed(1)+'h' : '—';
+  const qTxt = (highlightLog && highlightLog.sleepQuality)? '★'+highlightLog.sleepQuality : 'chưa có';
+  center.innerHTML = `<div class="big">${durTxt}</div><div class="small">${qTxt} · đêm qua</div>`;
+  wrap.appendChild(center);
+  return wrap;
+}
+
+function computeDuration(l){
+  if(!l.bedtime||!l.wakeTime) return null;
+  const [bh,bm]=l.bedtime.split(':').map(Number);
+  const [wh,wm]=l.wakeTime.split(':').map(Number);
+  let start=bh*60+bm, end=wh*60+wm;
+  if(end<=start) end+=1440;
+  let mins = end-start-(Number(l.sleepLatency)||0);
+  return mins/60;
+}
+
+/* ---------------- Home ---------------- */
+function renderHome(){
+  const c = decideContext();
+  const wrap = el('div');
+  const greetings = greetingNow();
+  wrap.innerHTML = `<div class="top-greeting">${greetings}</div><div class="top-date">${niceDate(new Date())}</div>`;
+
+  // last completed session for ring
+  const logs = loadLogs();
+  const keys = Object.keys(logs).sort();
+  let lastFull=null;
+  for(let i=keys.length-1;i>=0;i--){ if(logs[keys[i]].morningDone){ lastFull=logs[keys[i]]; lastFull.durationH=computeDuration(lastFull); break; } }
+  wrap.appendChild(dayRing(lastFull));
+
+  // CTA card
+  const cta = el('div','card cta');
+  if(c.type==='evening'){
+    cta.innerHTML = `<div class="cta-label">Sắp ngủ</div><div class="cta-title">Ghi lại buổi tối nay</div>`;
+    cta.appendChild(primaryBtn('Bắt đầu (~45 giây)', ()=>nav({name:'evening',key:c.key})));
+  } else if(c.type==='morning'){
+    cta.innerHTML = `<div class="cta-label">Mới dậy</div><div class="cta-title">Ghi lại giấc ngủ đêm qua</div>`;
+    cta.appendChild(primaryBtn('Bắt đầu (~20 giây)', ()=>nav({name:'morning',key:c.key})));
+  } else if(c.type==='eod'){
+    cta.innerHTML = `<div class="cta-label">Cuối ngày</div><div class="cta-title">Hôm nay thế nào?</div>`;
+    cta.appendChild(primaryBtn('Bắt đầu (~20 giây)', ()=>nav({name:'eod',key:c.key})));
+  } else {
+    cta.innerHTML = `<div class="cta-label">Hoàn tất</div><div class="cta-title">Đã ghi đủ hôm nay ✓</div><div class="hint">Quay lại vào buổi tối để ghi tiếp.</div>`;
+  }
+  wrap.appendChild(cta);
+
+  // stats
+  const stats = el('div','card');
+  const arr = keys.map(k=>logs[k]).filter(l=>l.morningDone).slice(-7);
+  const avgDur = avg(arr.map(l=>computeDuration(l)).filter(Boolean));
+  const avgQ = avg(arr.map(l=>Number(l.sleepQuality)).filter(Boolean));
+  const streak = computeStreak(logs);
+  stats.innerHTML = `<div class="row">
+    <div class="stat"><div class="v">${avgDur?avgDur.toFixed(1)+'h':'—'}</div><div class="l">TB ngủ 7 ngày</div></div>
+    <div class="stat"><div class="v">${avgQ?avgQ.toFixed(1):'—'}</div><div class="l">TB chất lượng</div></div>
+    <div class="stat"><div class="v">${streak}🔥</div><div class="l">streak ngày</div></div>
+  </div>`;
+  wrap.appendChild(stats);
+
+  wrap.appendChild(elText('div','section-title','Ghi chú nhanh'));
+  const note = el('div','card');
+  note.innerHTML = `<div class="hint">SleepInsight ghi theo 2 mốc mỗi ngày: <b>tối trước khi ngủ</b> và <b>sáng vừa dậy</b>, cộng thêm 1 mốc <b>cuối ngày</b> để nhìn tác động lên hôm sau. Dữ liệu lưu ngay trên máy bạn (chưa đồng bộ đám mây).</div>`;
+  wrap.appendChild(note);
+
+  return wrap;
+}
+
+function computeStreak(logs){
+  let n=0; let d=new Date();
+  while(true){
+    const k=fmtDateKey(d);
+    const l=logs[k];
+    if(l && l.eveningDone) { n++; d=addDays(d,-1); } else break;
+  }
+  return n;
+}
+function avg(a){ if(!a.length) return null; return a.reduce((x,y)=>x+y,0)/a.length; }
+function greetingNow(){
+  const h=new Date().getHours();
+  if(h<5) return 'Khuya rồi, ngủ ngon nhé 🌙';
+  if(h<11) return 'Chào buổi sáng ☀️';
+  if(h<18) return 'Chào buổi chiều';
+  return 'Chào buổi tối 🌆';
+}
+function niceDate(d){
+  const days=['CN','Th2','Th3','Th4','Th5','Th6','Th7'];
+  return `${days[d.getDay()]}, ${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`;
+}
+
+/* ---------------- UI helpers ---------------- */
+function el(tag,cls){ const e=document.createElement(tag); if(cls) e.className=cls; return e; }
+function elText(tag,cls,txt){ const e=el(tag,cls); e.textContent=txt; return e; }
+function primaryBtn(label,onClick){ const b=el('button','btn-primary'); b.textContent=label; b.onclick=onClick; return b; }
+function ghostBtn(label,onClick){ const b=el('button','btn-ghost'); b.textContent=label; b.onclick=onClick; return b; }
+
+function segField(container,label,options,value,onChange){
+  const f=el('div','field');
+  f.appendChild(elText('label','', label));
+  const seg=el('div','seg');
+  options.forEach(opt=>{
+    const b=el('button','seg-btn'+(value===opt.v?' sel':''));
+    b.textContent=opt.l;
+    b.onclick=()=>{ onChange(opt.v); };
+    seg.appendChild(b);
+  });
+  f.appendChild(seg);
+  container.appendChild(f);
+}
+function scale5Field(container,label,value,onChange,labels){
+  const f=el('div','field');
+  f.appendChild(elText('label','', label));
+  const sc=el('div','scale5');
+  for(let i=1;i<=5;i++){
+    const d=el('div','dot'+(Number(value)===i?' sel':''));
+    d.textContent=labels?labels[i-1]:i;
+    d.onclick=()=>onChange(i);
+    sc.appendChild(d);
+  }
+  f.appendChild(sc);
+  container.appendChild(f);
+}
+function timeField(container,label,value,onChange){
+  const f=el('div','field');
+  f.appendChild(elText('label','', label));
+  const inp=document.createElement('input');
+  inp.type='time'; inp.value=value||'';
+  inp.oninput=(e)=>onChange(e.target.value);
+  f.appendChild(inp);
+  container.appendChild(f);
+}
+function stepperField(container,label,value,onChange,min,max,unit){
+  const f=el('div','field');
+  f.appendChild(elText('label','', label));
+  const row=el('div','stepper-num');
+  const minus=el('button'); minus.textContent='–';
+  const val=el('div','val'); val.textContent=(value||0)+(unit?' '+unit:'');
+  const plus=el('button'); plus.textContent='+';
+  minus.onclick=()=>{ let v=Math.max(min, (Number(value)||0)-1); onChange(v); };
+  plus.onclick=()=>{ let v=Math.min(max, (Number(value)||0)+1); onChange(v); };
+  row.append(minus,val,plus);
+  f.appendChild(row);
+  container.appendChild(f);
+}
+function progressDots(container,total,doneCount){
+  const p=el('div','step-progress');
+  for(let i=0;i<total;i++) p.appendChild(el('div','step-dot'+(i<doneCount?' done':'')));
+  container.appendChild(p);
+}
+
+/* ---------------- Evening form (2 steps) ---------------- */
+function renderEveningForm(key){
+  const wrap=el('div');
+  const log=getLog(key);
+  const state = Object.assign({
+    bedtime:'', lastMeal:'', lateSnack:'no', lateSnackTime:'',
+    caffeineTime:'', caffeineAmount:0, alcohol:'no', alcoholTime:'',
+    exerciseDone:'no', exerciseTime:'', exerciseIntensity:0,
+    screenTimeMin:0, stress:0
+  }, log);
+  let step=0;
+
+  function draw(){
+    wrap.innerHTML='';
+    wrap.appendChild(elText('div','top-greeting','Buổi tối · '+key));
+    progressDots(wrap,2,step);
+    const card=el('div','card');
+
+    if(step===0){
+      card.appendChild(elText('div','cta-title','Ăn uống & chất kích thích'));
+      timeField(card,'Dự kiến giờ lên giường',state.bedtime,v=>{state.bedtime=v;});
+      timeField(card,'Bữa ăn cuối cùng',state.lastMeal,v=>{state.lastMeal=v;});
+      segField(card,'Có ăn khuya không?',[{v:'no',l:'Không'},{v:'yes',l:'Có'}],state.lateSnack,v=>{state.lateSnack=v;draw();});
+      if(state.lateSnack==='yes'){
+        const sub=el('div','subfield'); card.appendChild(sub);
+        timeField(sub,'Giờ ăn khuya',state.lateSnackTime,v=>{state.lateSnackTime=v;});
+      }
+      timeField(card,'Giờ uống caffeine cuối cùng (bỏ trống nếu không)',state.caffeineTime,v=>{state.caffeineTime=v;});
+      stepperField(card,'Số ly/tách caffeine hôm nay',state.caffeineAmount,v=>{state.caffeineAmount=v;draw();},0,10,'ly');
+      segField(card,'Có uống rượu bia không?',[{v:'no',l:'Không'},{v:'yes',l:'Có'}],state.alcohol,v=>{state.alcohol=v;draw();});
+      if(state.alcohol==='yes'){
+        const sub=el('div','subfield'); card.appendChild(sub);
+        timeField(sub,'Giờ uống',state.alcoholTime,v=>{state.alcoholTime=v;});
+      }
+    } else {
+      card.appendChild(elText('div','cta-title','Vận động & tinh thần'));
+      segField(card,'Có tập thể dục hôm nay không?',[{v:'no',l:'Không'},{v:'yes',l:'Có'}],state.exerciseDone,v=>{state.exerciseDone=v;draw();});
+      if(state.exerciseDone==='yes'){
+        const sub=el('div','subfield'); card.appendChild(sub);
+        timeField(sub,'Giờ tập',state.exerciseTime,v=>{state.exerciseTime=v;});
+        scale5Field(sub,'Cường độ',state.exerciseIntensity,v=>{state.exerciseIntensity=v;draw();});
+      }
+      stepperField(card,'Thời gian dùng màn hình trước khi ngủ',state.screenTimeMin,v=>{state.screenTimeMin=v;draw();},0,180,'phút');
+      scale5Field(card,'Mức độ stress hôm nay',state.stress,v=>{state.stress=v;draw();},['1','2','3','4','5']);
+    }
+    wrap.appendChild(card);
+
+    const nextBtn = primaryBtn(step===0?'Tiếp tục':'Lưu & hoàn tất', ()=>{
+      if(step===0){ step=1; draw(); window.scrollTo(0,0); }
+      else {
+        setLog(key, Object.assign({}, state, {eveningDone:true}));
+        nav({name:'home'});
+      }
+    });
+    wrap.appendChild(nextBtn);
+    if(step===1){
+      wrap.appendChild(ghostBtnMargin('Quay lại',()=>{step=0;draw();window.scrollTo(0,0);}));
+    } else {
+      wrap.appendChild(ghostBtnMargin('Để sau',()=>nav({name:'home'})));
+    }
+  }
+  function ghostBtnMargin(label,fn){ const b=ghostBtn(label,fn); b.style.marginTop='10px'; return b; }
+  draw();
+  return wrap;
+}
+
+/* ---------------- Morning form ---------------- */
+function renderMorningForm(key){
+  const wrap=el('div');
+  const log=getLog(key);
+  const state=Object.assign({wakeTime:curTimeStr(), sleepLatency:10, sleepQuality:0, wakeUps:0, energyMorning:0}, log);
+
+  function draw(){
+    wrap.innerHTML='';
+    wrap.appendChild(elText('div','top-greeting','Buổi sáng · đêm '+key));
+    const card=el('div','card');
+    card.appendChild(elText('div','cta-title','Đêm qua bạn ngủ thế nào?'));
+    timeField(card,'Giờ dậy',state.wakeTime,v=>{state.wakeTime=v;});
+    stepperField(card,'Mất bao lâu để ngủ được',state.sleepLatency,v=>{state.sleepLatency=v;draw();},0,120,'phút');
+    scale5Field(card,'Chất lượng giấc ngủ',state.sleepQuality,v=>{state.sleepQuality=v;draw();});
+    stepperField(card,'Số lần tỉnh giấc giữa đêm',state.wakeUps,v=>{state.wakeUps=v;draw();},0,10);
+    scale5Field(card,'Năng lượng sáng nay',state.energyMorning,v=>{state.energyMorning=v;draw();});
+    wrap.appendChild(card);
+    const btn=primaryBtn('Lưu',()=>{
+      setLog(key, Object.assign({}, state, {morningDone:true}));
+      nav({name:'home'});
+    });
+    wrap.appendChild(btn);
+    const back=ghostBtn('Để sau',()=>nav({name:'home'})); back.style.marginTop='10px';
+    wrap.appendChild(back);
+  }
+  draw();
+  return wrap;
+}
+function curTimeStr(){ const d=new Date(); const p=n=>String(n).padStart(2,'0'); return `${p(d.getHours())}:${p(d.getMinutes())}`; }
+
+/* ---------------- End-of-day output form ---------------- */
+function renderEodForm(key){
+  const wrap=el('div');
+  const log=getLog(key);
+  const state=Object.assign({firstDrowsyTime:'', productivity:0, mood:0, napDone:'no', napMin:0}, log);
+
+  function draw(){
+    wrap.innerHTML='';
+    wrap.appendChild(elText('div','top-greeting','Cuối ngày · '+key));
+    const card=el('div','card');
+    card.appendChild(elText('div','cta-title','Hôm nay (kết quả của đêm qua)'));
+    timeField(card,'Mấy giờ bạn bắt đầu thấy mỏi mắt/buồn ngủ?',state.firstDrowsyTime,v=>{state.firstDrowsyTime=v;});
+    scale5Field(card,'Năng suất làm việc hôm nay',state.productivity,v=>{state.productivity=v;draw();});
+    scale5Field(card,'Tâm trạng hôm nay',state.mood,v=>{state.mood=v;draw();});
+    segField(card,'Có ngủ trưa không?',[{v:'no',l:'Không'},{v:'yes',l:'Có'}],state.napDone,v=>{state.napDone=v;draw();});
+    if(state.napDone==='yes'){
+      stepperField(card,'Ngủ trưa bao lâu',state.napMin,v=>{state.napMin=v;draw();},0,180,'phút');
+    }
+    wrap.appendChild(card);
+    const btn=primaryBtn('Lưu & hoàn tất hôm nay',()=>{
+      setLog(key, Object.assign({}, state, {eodDone:true}));
+      nav({name:'home'});
+    });
+    wrap.appendChild(btn);
+    const back=ghostBtn('Để sau',()=>nav({name:'home'})); back.style.marginTop='10px';
+    wrap.appendChild(back);
+  }
+  draw();
+  return wrap;
+}
+
+/* ---------------- History ---------------- */
+function renderHistory(){
+  const wrap=el('div');
+  wrap.appendChild(elText('div','top-greeting','Lịch sử'));
+  wrap.appendChild(elText('div','top-date','14 ngày gần nhất'));
+  const logs=loadLogs();
+  const keys=Object.keys(logs).sort().slice(-14).reverse();
+  if(!keys.length){
+    wrap.appendChild(elText('div','empty','Chưa có dữ liệu. Bắt đầu ghi từ tối nay nhé 🌙'));
+    return wrap;
+  }
+  const card=el('div','card');
+  keys.forEach(k=>{
+    const l=logs[k];
+    const dur=computeDuration(l);
+    const pct = dur? Math.min(100, (dur/9)*100) : 0;
+    const q=l.sleepQuality||0;
+    const color = q>=4?'var(--good)': q>=3?'var(--warn)':'var(--bad)';
+    const row=el('div','hist-row');
+    row.innerHTML=`<div class="hist-date">${k.slice(5)}</div>
+      <div class="hist-bar-wrap"><div class="hist-bar" style="width:${pct}%;background:${l.morningDone?color:'var(--navy-line)'}"></div></div>
+      <div class="hist-q">${l.morningDone? (dur?dur.toFixed(1)+'h':'-'):'—'}</div>`;
+    card.appendChild(row);
+  });
+  wrap.appendChild(card);
+
+  // export
+  const exp=el('div','card');
+  exp.appendChild(elText('div','cta-title','Xuất dữ liệu'));
+  exp.appendChild(elText('div','hint','Tải CSV để phân tích sâu hơn trong Sheets / Python.'));
+  exp.appendChild(primaryBtnMargin('Tải file CSV', exportCSV));
+  wrap.appendChild(exp);
+  return wrap;
+}
+function primaryBtnMargin(label,fn){ const b=primaryBtn(label,fn); b.style.marginTop='10px'; return b; }
+
+function exportCSV(){
+  const logs=loadLogs();
+  const keys=Object.keys(logs).sort();
+  const cols=['date','bedtime','wakeTime','sleepLatency','sleepQuality','wakeUps','energyMorning',
+    'lastMeal','lateSnack','lateSnackTime','caffeineTime','caffeineAmount','alcohol','alcoholTime',
+    'exerciseDone','exerciseTime','exerciseIntensity','screenTimeMin','stress',
+    'firstDrowsyTime','productivity','mood','napDone','napMin'];
+  const rows=[cols.join(',')];
+  keys.forEach(k=>{
+    const l=logs[k];
+    rows.push(cols.map(c=>l[c]!==undefined?String(l[c]).replace(/,/g,';'):'').join(','));
+  });
+  const blob=new Blob([rows.join('\n')],{type:'text/csv'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='sleepinsight_export.csv'; a.click();
+}
+
+/* ---------------- Tabbar ---------------- */
+function renderTabbar(){
+  const bar=el('div','tabbar');
+  const tabs=[{n:'home',ic:'◐',l:'Hôm nay'},{n:'history',ic:'▤',l:'Lịch sử'}];
+  tabs.forEach(t=>{
+    const b=el('div','tab'+(route.name===t.n?' active':''));
+    b.innerHTML=`<span class="ic">${t.ic}</span>${t.l}`;
+    b.onclick=()=>nav({name:t.n});
+    bar.appendChild(b);
+  });
+  return bar;
+}
+
+/* ---------------- Init ---------------- */
+render();
+pullFromBackend().then(changed=>{ if(changed) render(); });
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "name": "SleepInsight",
+  "short_name": "SleepInsight",
+  "description": "Theo dõi giấc ngủ và các yếu tố ảnh hưởng để tối ưu routine cá nhân.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#12132A",
+  "theme_color": "#12132A",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
