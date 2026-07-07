@@ -740,6 +740,7 @@ function renderHistory(){
   }
   wrap.appendChild(elText('div','hint','Bấm vào 1 ngày để sửa hoặc xoá.'));
   const card=el('div','card');
+  keys.forEach(k=>{
     const l=logs[k];
     const dur=computeDuration(l);
     const pct = dur? Math.min(100, (dur/9)*100) : 0;
