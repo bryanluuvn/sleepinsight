@@ -194,6 +194,13 @@
 <div id="app"></div>
 
 <script>
+/* ---------------- User identity ---------------- */
+const USER_KEY = 'sleepinsight_user';
+function getUser(){ return localStorage.getItem(USER_KEY) || ''; }
+function setUser(name){ localStorage.setItem(USER_KEY, name.trim()); }
+function clearUser(){ localStorage.removeItem(USER_KEY); }
+function storeKey(){ return 'sleepinsight_logs_v1_' + (getUser() || 'guest'); }
+
 /* ---------------- Backend sync config ---------------- */
 // Dán URL deployment Apps Script (dạng https://script.google.com/macros/s/XXXX/exec) vào đây.
 // Để trống '' nếu chỉ muốn dùng offline (localStorage only).
@@ -205,7 +212,7 @@ async function pushToBackend(record){
     await fetch(CONFIG.API_URL, {
       method:'POST',
       headers:{'Content-Type':'text/plain;charset=utf-8'}, // tránh CORS preflight với Apps Script
-      body: JSON.stringify(record)
+      body: JSON.stringify(Object.assign({}, record, {user:getUser()}))
     });
   }catch(err){ console.warn('Sync lên Sheets thất bại, sẽ thử lại lần sau', err); }
 }
@@ -213,7 +220,7 @@ async function pushToBackend(record){
 async function pullFromBackend(){
   if(!CONFIG.API_URL) return false;
   try{
-    const res = await fetch(CONFIG.API_URL);
+    const res = await fetch(CONFIG.API_URL + '?user=' + encodeURIComponent(getUser()));
     const remote = await res.json();
     const local = loadLogs();
     remote.forEach(r=>{
@@ -228,20 +235,25 @@ async function pullFromBackend(){
 }
 
 /* ---------------- Data layer ---------------- */
-const STORE_KEY = 'sleepinsight_logs_v1';
 const TARGET_SLEEP_H = 7.5;
 
 function loadLogs(){
-  try{ return JSON.parse(localStorage.getItem(STORE_KEY) || '{}'); }catch(e){ return {}; }
+  try{ return JSON.parse(localStorage.getItem(storeKey()) || '{}'); }catch(e){ return {}; }
 }
-function saveLogs(logs){ localStorage.setItem(STORE_KEY, JSON.stringify(logs)); }
+function saveLogs(logs){ localStorage.setItem(storeKey(), JSON.stringify(logs)); }
 function getLog(dateKey){ const L=loadLogs(); return L[dateKey] || {date:dateKey}; }
 function setLog(dateKey, patch){
   const L=loadLogs();
-  const merged = Object.assign({date:dateKey}, L[dateKey]||{}, patch);
+  const merged = Object.assign({date:dateKey, user:getUser()}, L[dateKey]||{}, patch);
   L[dateKey] = merged;
   saveLogs(L);
   pushToBackend(merged);
+}
+function deleteLog(dateKey){
+  const L=loadLogs();
+  delete L[dateKey];
+  saveLogs(L);
+  pushToBackend({date:dateKey, _delete:true});
 }
 function fmtDateKey(d){
   const p=n=>String(n).padStart(2,'0');
@@ -288,14 +300,38 @@ let route = {name:'home'};
 function nav(r){ route=r; render(); window.scrollTo(0,0); }
 
 function render(){
+  if(!getUser() && route.name!=='onboarding'){ route={name:'onboarding'}; }
   const app = document.getElementById('app');
   app.innerHTML = '';
+  if(route.name==='onboarding') { app.append(renderOnboarding()); return; }
   if(route.name==='home') app.append(renderHome());
   else if(route.name==='evening') app.append(renderEveningForm(route.key));
   else if(route.name==='morning') app.append(renderMorningForm(route.key));
   else if(route.name==='eod') app.append(renderEodForm(route.key));
   else if(route.name==='history') app.append(renderHistory());
+  else if(route.name==='edit') app.append(renderEditForm(route.key));
   app.append(renderTabbar());
+}
+
+function renderOnboarding(){
+  const wrap=el('div');
+  wrap.style.paddingTop='60px';
+  wrap.appendChild(elText('div','top-greeting','Chào mừng đến với'));
+  wrap.appendChild(elText('div','cta-title','SleepInsight'));
+  const card=el('div','card');
+  card.appendChild(elText('div','hint','Nhập tên hoặc email để dữ liệu của bạn tách riêng, không lẫn với người khác dùng chung Sheet.'));
+  const f=el('div','field'); f.style.marginTop='14px';
+  const inp=document.createElement('input');
+  inp.type='text'; inp.placeholder='VD: bryan hoặc bryan@email.com';
+  f.appendChild(inp);
+  card.appendChild(f);
+  wrap.appendChild(card);
+  wrap.appendChild(primaryBtn('Bắt đầu', ()=>{
+    if(!inp.value.trim()) return;
+    setUser(inp.value);
+    nav({name:'home'});
+  }));
+  return wrap;
 }
 
 /* ---------------- Day ring ---------------- */
@@ -614,6 +650,83 @@ function renderEodForm(key){
   return wrap;
 }
 
+/* ---------------- Edit a past day ---------------- */
+function renderEditForm(key){
+  const wrap=el('div');
+  const log=getLog(key);
+  const state=Object.assign({
+    bedtime:'', lastMeal:'', lateSnack:'no', lateSnackTime:'',
+    caffeineTime:'', caffeineAmount:0, alcohol:'no', alcoholTime:'',
+    exerciseDone:'no', exerciseTime:'', exerciseIntensity:0,
+    screenTimeMin:0, stress:0,
+    wakeTime:'', sleepLatency:0, sleepQuality:0, wakeUps:0, energyMorning:0,
+    firstDrowsyTime:'', productivity:0, mood:0, napDone:'no', napMin:0
+  }, log);
+
+  function draw(){
+    wrap.innerHTML='';
+    wrap.appendChild(elText('div','top-greeting','Sửa ngày · '+key));
+
+    const c1=el('div','card');
+    c1.appendChild(elText('div','cta-title','Buổi tối'));
+    timeField(c1,'Giờ lên giường',state.bedtime,v=>{state.bedtime=v;});
+    timeField(c1,'Bữa ăn cuối cùng',state.lastMeal,v=>{state.lastMeal=v;});
+    segField(c1,'Ăn khuya?',[{v:'no',l:'Không'},{v:'yes',l:'Có'}],state.lateSnack,v=>{state.lateSnack=v;draw();});
+    if(state.lateSnack==='yes') timeField(c1,'Giờ ăn khuya',state.lateSnackTime,v=>{state.lateSnackTime=v;});
+    timeField(c1,'Giờ caffeine cuối',state.caffeineTime,v=>{state.caffeineTime=v;});
+    stepperField(c1,'Số ly caffeine',state.caffeineAmount,v=>{state.caffeineAmount=v;draw();},0,10,'ly');
+    segField(c1,'Rượu bia?',[{v:'no',l:'Không'},{v:'yes',l:'Có'}],state.alcohol,v=>{state.alcohol=v;draw();});
+    if(state.alcohol==='yes') timeField(c1,'Giờ uống',state.alcoholTime,v=>{state.alcoholTime=v;});
+    segField(c1,'Tập thể dục?',[{v:'no',l:'Không'},{v:'yes',l:'Có'}],state.exerciseDone,v=>{state.exerciseDone=v;draw();});
+    if(state.exerciseDone==='yes'){
+      timeField(c1,'Giờ tập',state.exerciseTime,v=>{state.exerciseTime=v;});
+      scale5Field(c1,'Cường độ',state.exerciseIntensity,v=>{state.exerciseIntensity=v;draw();});
+    }
+    stepperField(c1,'Screen time trước ngủ',state.screenTimeMin,v=>{state.screenTimeMin=v;draw();},0,180,'phút');
+    scale5Field(c1,'Stress',state.stress,v=>{state.stress=v;draw();});
+    wrap.appendChild(c1);
+
+    const c2=el('div','card');
+    c2.appendChild(elText('div','cta-title','Buổi sáng'));
+    timeField(c2,'Giờ dậy',state.wakeTime,v=>{state.wakeTime=v;});
+    stepperField(c2,'Thời gian vào giấc',state.sleepLatency,v=>{state.sleepLatency=v;draw();},0,120,'phút');
+    scale5Field(c2,'Chất lượng ngủ',state.sleepQuality,v=>{state.sleepQuality=v;draw();});
+    stepperField(c2,'Số lần tỉnh giấc',state.wakeUps,v=>{state.wakeUps=v;draw();},0,10);
+    scale5Field(c2,'Năng lượng sáng',state.energyMorning,v=>{state.energyMorning=v;draw();});
+    wrap.appendChild(c2);
+
+    const c3=el('div','card');
+    c3.appendChild(elText('div','cta-title','Cuối ngày'));
+    timeField(c3,'Giờ mỏi mắt đầu tiên',state.firstDrowsyTime,v=>{state.firstDrowsyTime=v;});
+    scale5Field(c3,'Năng suất',state.productivity,v=>{state.productivity=v;draw();});
+    scale5Field(c3,'Tâm trạng',state.mood,v=>{state.mood=v;draw();});
+    segField(c3,'Ngủ trưa?',[{v:'no',l:'Không'},{v:'yes',l:'Có'}],state.napDone,v=>{state.napDone=v;draw();});
+    if(state.napDone==='yes') stepperField(c3,'Ngủ trưa bao lâu',state.napMin,v=>{state.napMin=v;draw();},0,180,'phút');
+    wrap.appendChild(c3);
+
+    wrap.appendChild(primaryBtn('Lưu thay đổi', ()=>{
+      setLog(key, Object.assign({}, state, {
+        eveningDone: log.eveningDone || !!state.bedtime,
+        morningDone: log.morningDone || !!state.wakeTime,
+        eodDone: log.eodDone || !!state.firstDrowsyTime
+      }));
+      nav({name:'history'});
+    }));
+    const del=ghostBtn('Xoá ngày này', ()=>{
+      if(confirm('Xoá toàn bộ dữ liệu ngày '+key+'?')){
+        deleteLog(key);
+        nav({name:'history'});
+      }
+    });
+    del.style.marginTop='10px'; del.style.color='var(--bad)'; del.style.borderColor='var(--bad)';
+    wrap.appendChild(del);
+    const back=ghostBtn('Quay lại',()=>nav({name:'history'})); back.style.marginTop='10px';
+    wrap.appendChild(back);
+  }
+  draw();
+  return wrap;
+}
+
 /* ---------------- History ---------------- */
 function renderHistory(){
   const wrap=el('div');
@@ -625,17 +738,19 @@ function renderHistory(){
     wrap.appendChild(elText('div','empty','Chưa có dữ liệu. Bắt đầu ghi từ tối nay nhé 🌙'));
     return wrap;
   }
+  wrap.appendChild(elText('div','hint','Bấm vào 1 ngày để sửa hoặc xoá.'));
   const card=el('div','card');
-  keys.forEach(k=>{
     const l=logs[k];
     const dur=computeDuration(l);
     const pct = dur? Math.min(100, (dur/9)*100) : 0;
     const q=l.sleepQuality||0;
     const color = q>=4?'var(--good)': q>=3?'var(--warn)':'var(--bad)';
     const row=el('div','hist-row');
+    row.style.cursor='pointer';
     row.innerHTML=`<div class="hist-date">${k.slice(5)}</div>
       <div class="hist-bar-wrap"><div class="hist-bar" style="width:${pct}%;background:${l.morningDone?color:'var(--navy-line)'}"></div></div>
       <div class="hist-q">${l.morningDone? (dur?dur.toFixed(1)+'h':'-'):'—'}</div>`;
+    row.onclick=()=>nav({name:'edit', key:k});
     card.appendChild(row);
   });
   wrap.appendChild(card);
@@ -646,6 +761,19 @@ function renderHistory(){
   exp.appendChild(elText('div','hint','Tải CSV để phân tích sâu hơn trong Sheets / Python.'));
   exp.appendChild(primaryBtnMargin('Tải file CSV', exportCSV));
   wrap.appendChild(exp);
+
+  const acc=el('div','card');
+  acc.innerHTML = `<div class="hint">Đang dùng: <b>${getUser()}</b></div>`;
+  const sw=ghostBtn('Đổi người dùng', ()=>{
+    if(confirm('Đổi người dùng? Dữ liệu hiện tại vẫn được giữ, chỉ ẩn đi cho tới khi bạn nhập lại đúng tên.')){
+      clearUser();
+      nav({name:'onboarding'});
+    }
+  });
+  sw.style.marginTop='10px';
+  acc.appendChild(sw);
+  wrap.appendChild(acc);
+
   return wrap;
 }
 function primaryBtnMargin(label,fn){ const b=primaryBtn(label,fn); b.style.marginTop='10px'; return b; }
