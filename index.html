@@ -7,6 +7,9 @@
 <title>SleepInsight</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
     --navy-deep:#12132A;
@@ -36,7 +39,6 @@
     display:flex;
     justify-content:center;
   }
-  @font-face{font-family:'Space Grotesk';src:local('Space Grotesk');}
   #app{
     width:100%;
     max-width:480px;
@@ -63,6 +65,7 @@
     position:relative;
     width:220px;height:220px;
     margin:8px auto 22px;
+    filter:drop-shadow(0 8px 24px rgba(74,108,247,.18));
   }
   .ring-bg{
     position:absolute;inset:0;border-radius:50%;
@@ -80,8 +83,8 @@
   }
   .ring-mask{
     position:absolute; inset:14px; border-radius:50%;
-    background:var(--navy-deep);
-    box-shadow:inset 0 0 30px rgba(0,0,0,.4);
+    background:radial-gradient(120% 120% at 30% 20%, #1a1c42 0%, var(--navy-deep) 70%);
+    box-shadow:inset 0 0 30px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.04);
   }
   .ring-svg{position:absolute;inset:0;transform:rotate(-90deg);}
   .ring-center{
@@ -89,23 +92,24 @@
     display:flex;flex-direction:column;align-items:center;justify-content:center;
     text-align:center;
   }
-  .ring-center .big{font-family:var(--font-display);font-size:28px;font-weight:600;}
+  .ring-center .big{font-family:var(--font-display);font-size:30px;font-weight:600;letter-spacing:-.01em;}
   .ring-center .small{font-family:var(--font-mono);font-size:12px;color:var(--muted);margin-top:2px;}
   .time-marker{
     position:absolute; top:50%; left:50%;
     width:10px;height:10px;border-radius:50%;
-    background:#fff; box-shadow:0 0 10px 2px rgba(255,255,255,.7);
+    background:#fff; box-shadow:0 0 12px 3px rgba(255,255,255,.8);
     margin:-5px;
     transform-origin:5px 5px;
   }
 
   /* Cards */
   .card{
-    background:var(--navy-surface);
+    background:linear-gradient(165deg, rgba(255,255,255,.03), rgba(255,255,255,0) 40%), var(--navy-surface);
     border:1px solid var(--navy-line);
     border-radius:var(--radius);
     padding:18px;
     margin-bottom:14px;
+    box-shadow:0 4px 18px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.03);
   }
   .card.cta{
     background:linear-gradient(135deg, rgba(74,108,247,.18), rgba(139,92,246,.12));
@@ -113,71 +117,91 @@
   }
   .box-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;}
   .box{
-    background:var(--navy-surface);border:1px solid var(--navy-line);
+    background:linear-gradient(165deg, rgba(255,255,255,.03), rgba(255,255,255,0) 50%), var(--navy-surface);
+    border:1px solid var(--navy-line);
     border-radius:14px;padding:16px 6px;text-align:center;cursor:pointer;
+    box-shadow:0 4px 14px rgba(0,0,0,.2);
+    transition:transform .12s ease, box-shadow .12s ease, border-color .12s ease;
   }
-  .box.done{border-color:var(--good);background:linear-gradient(135deg, rgba(95,216,166,.12), transparent);}
+  .box:active{transform:scale(.96);}
+  .box.done{border-color:var(--good);background:linear-gradient(135deg, rgba(95,216,166,.14), var(--navy-surface));box-shadow:0 4px 16px rgba(95,216,166,.12);}
   .box .box-ic{font-size:22px;display:block;margin-bottom:6px;}
   .box .box-label{font-size:12px;font-weight:600;}
   .box .box-status{font-size:10px;color:var(--muted);margin-top:4px;}
   .box.done .box-status{color:var(--good);font-weight:600;}
+  .slider-wrap{margin-top:10px;}
+  .slider-display{font-family:var(--font-mono);font-size:22px;font-weight:600;text-align:center;margin-bottom:10px;}
+  .time-slider{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:3px;background:var(--navy-line);outline:none;}
+  .time-slider::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;border-radius:50%;background:var(--blue);box-shadow:0 2px 8px rgba(0,0,0,.35), 0 0 0 6px rgba(74,108,247,.22);cursor:pointer;transition:box-shadow .12s ease;}
+  .time-slider::-moz-range-thumb{width:28px;height:28px;border-radius:50%;background:var(--blue);border:none;box-shadow:0 2px 8px rgba(0,0,0,.35), 0 0 0 6px rgba(74,108,247,.22);cursor:pointer;}
   .cta-label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;}
-  .cta-title{font-family:var(--font-display);font-size:19px;font-weight:600;margin-bottom:12px;}
+  .cta-title{font-family:var(--font-display);font-size:19px;font-weight:600;margin-bottom:12px;letter-spacing:-.01em;}
   .row{display:flex;gap:10px;}
   .stat{flex:1;text-align:center;}
   .stat .v{font-family:var(--font-mono);font-size:20px;font-weight:600;}
   .stat .l{font-size:11px;color:var(--muted);margin-top:2px;}
 
-  button{font-family:var(--font-body);border:none;cursor:pointer;}
+  button{font-family:var(--font-body);border:none;cursor:pointer;transition:transform .1s ease, background .15s ease, opacity .15s ease;}
   .btn-primary{
-    width:100%;padding:15px;border-radius:14px;
-    background:var(--blue);color:#fff;font-weight:600;font-size:15px;
+    width:100%;padding:16px;border-radius:14px;
+    background:linear-gradient(135deg, var(--blue), #5f7bfa);color:#fff;font-weight:600;font-size:15px;
+    box-shadow:0 6px 20px rgba(74,108,247,.35);
   }
-  .btn-primary:active{background:#3d5cf0;}
+  .btn-primary:active{transform:scale(.97);box-shadow:0 3px 10px rgba(74,108,247,.3);}
   .btn-ghost{
     width:100%;padding:13px;border-radius:14px;
-    background:transparent;border:1px solid var(--navy-line);color:var(--off-white);font-size:14px;
+    background:rgba(255,255,255,.02);border:1px solid var(--navy-line);color:var(--off-white);font-size:14px;
   }
+  .btn-ghost:active{transform:scale(.97);background:rgba(255,255,255,.05);}
   .btn-back{background:transparent;color:var(--muted);font-size:14px;padding:8px 0;}
 
   /* Nav */
   .tabbar{
     position:fixed;bottom:0;left:50%;transform:translateX(-50%);
     width:100%;max-width:480px;
-    background:rgba(28,30,58,.92);backdrop-filter:blur(10px);
+    background:rgba(20,22,50,.85);backdrop-filter:blur(16px);
     border-top:1px solid var(--navy-line);
+    box-shadow:0 -8px 24px rgba(0,0,0,.3);
     display:flex;padding:10px 18px calc(10px + env(safe-area-inset-bottom));
   }
-  .tab{flex:1;text-align:center;color:var(--muted);font-size:11px;padding:6px 0;border-radius:10px;}
-  .tab.active{color:var(--off-white);}
+  .tab{flex:1;text-align:center;color:var(--muted);font-size:11px;padding:6px 0;border-radius:10px;transition:color .15s ease;}
+  .tab.active{color:var(--off-white);background:rgba(74,108,247,.12);}
   .tab .ic{font-size:18px;display:block;margin-bottom:2px;}
 
   /* Form step */
   .step-progress{display:flex;gap:5px;margin-bottom:16px;}
-  .step-dot{flex:1;height:4px;border-radius:2px;background:var(--navy-line);}
+  .step-dot{flex:1;height:4px;border-radius:2px;background:var(--navy-line);transition:background .2s ease;}
   .step-dot.done{background:var(--blue);}
   .field{margin-bottom:20px;}
   .field label{display:block;font-size:13px;color:var(--muted);margin-bottom:8px;}
   input[type=time], input[type=number], input[type=text]{
-    width:100%;padding:12px 14px;border-radius:12px;
+    width:100%;padding:13px 14px;border-radius:12px;
     background:var(--navy-deep);border:1px solid var(--navy-line);
     color:var(--off-white);font-family:var(--font-mono);font-size:16px;
+    transition:border-color .15s ease, box-shadow .15s ease;
   }
-  .seg{display:flex;gap:8px;}
+  input[type=time]:focus, input[type=number]:focus, input[type=text]:focus{
+    outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(74,108,247,.2);
+  }
+  .seg{display:flex;gap:8px;flex-wrap:wrap;}
   .seg-btn{
-    flex:1;padding:12px 6px;border-radius:12px;
+    flex:1;min-width:56px;padding:12px 6px;border-radius:12px;
     background:var(--navy-deep);border:1px solid var(--navy-line);
     color:var(--off-white);font-size:13px;text-align:center;
+    transition:transform .1s ease, background .15s ease, border-color .15s ease;
   }
-  .seg-btn.sel{background:var(--blue);border-color:var(--blue);font-weight:600;}
+  .seg-btn:active{transform:scale(.95);}
+  .seg-btn.sel{background:linear-gradient(135deg, var(--blue), #5f7bfa);border-color:var(--blue);font-weight:600;box-shadow:0 4px 14px rgba(74,108,247,.3);}
   .scale5{display:flex;gap:6px;}
   .scale5 .dot{
     flex:1;aspect-ratio:1;border-radius:12px;
     background:var(--navy-deep);border:1px solid var(--navy-line);
     display:flex;align-items:center;justify-content:center;
     font-family:var(--font-mono);font-size:15px;color:var(--muted);
+    transition:transform .1s ease, background .15s ease;
   }
-  .scale5 .dot.sel{background:var(--purple);border-color:var(--purple);color:#fff;font-weight:700;}
+  .scale5 .dot:active{transform:scale(.92);}
+  .scale5 .dot.sel{background:linear-gradient(135deg, var(--purple), #a375f7);border-color:var(--purple);color:#fff;font-weight:700;box-shadow:0 4px 14px rgba(139,92,246,.32);}
   .stepper-num{display:flex;align-items:center;gap:12px;}
   .stepper-num button{
     width:40px;height:40px;border-radius:10px;background:var(--navy-deep);
@@ -198,6 +222,12 @@
   .empty{text-align:center;color:var(--muted);font-size:13px;padding:30px 10px;}
   .section-title{font-family:var(--font-display);font-size:15px;font-weight:600;margin:22px 0 10px;color:var(--off-white);}
   ::selection{background:var(--purple);}
+  .screen-enter{animation:screenIn .32s cubic-bezier(.22,.9,.36,1) both;}
+  @keyframes screenIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+  @media (prefers-reduced-motion: reduce){
+    .screen-enter{animation:none;}
+    *{transition:none !important;}
+  }
 </style>
 </head>
 <body>
@@ -299,6 +329,11 @@ function currentSessionKey(){
   if(pending) return pending.key;
   return eveningSessionKey();
 }
+function findPreviousLog(beforeKey, doneFlag){
+  const logs = loadLogs();
+  const keys = Object.keys(logs).filter(k=>k<beforeKey && logs[k][doneFlag]).sort();
+  return keys.length ? logs[keys[keys.length-1]] : null;
+}
 
 function decideContext(){
   const h = new Date().getHours();
@@ -319,13 +354,16 @@ function render(){
   if(!getUser() && route.name!=='onboarding'){ route={name:'onboarding'}; }
   const app = document.getElementById('app');
   app.innerHTML = '';
-  if(route.name==='onboarding') { app.append(renderOnboarding()); return; }
-  if(route.name==='home') app.append(renderHome());
-  else if(route.name==='evening') app.append(renderEveningForm(route.key));
-  else if(route.name==='morning') app.append(renderMorningForm(route.key));
-  else if(route.name==='eod') app.append(renderEodForm(route.key));
-  else if(route.name==='history') app.append(renderHistory());
-  else if(route.name==='edit') app.append(renderEditForm(route.key));
+  if(route.name==='onboarding') { const w=renderOnboarding(); w.classList.add('screen-enter'); app.append(w); return; }
+  let content;
+  if(route.name==='home') content=renderHome();
+  else if(route.name==='evening') content=renderEveningForm(route.key);
+  else if(route.name==='morning') content=renderMorningForm(route.key);
+  else if(route.name==='eod') content=renderEodForm(route.key);
+  else if(route.name==='history') content=renderHistory();
+  else if(route.name==='edit') content=renderEditForm(route.key);
+  content.classList.add('screen-enter');
+  app.append(content);
   app.append(renderTabbar());
 }
 
@@ -510,13 +548,73 @@ function scale5Field(container,label,value,onChange,labels){
   f.appendChild(sc);
   container.appendChild(f);
 }
-function timeField(container,label,value,onChange){
+function minutesToTimeStr(m){
+  const mm=((m%1440)+1440)%1440;
+  const h=Math.floor(mm/60), mi=mm%60;
+  const p=n=>String(n).padStart(2,'0');
+  return p(h)+':'+p(mi);
+}
+function timeStrToMinutes(v){
+  if(!v) return null;
+  const parts=v.split(':');
+  if(parts.length<2) return null;
+  const h=Number(parts[0]), m=Number(parts[1]);
+  if(isNaN(h)||isNaN(m)) return null;
+  return h*60+m;
+}
+function timeField(container,label,value,onChange,presets,sliderRange){
   const f=el('div','field');
   f.appendChild(elText('label','', label));
-  const inp=document.createElement('input');
-  inp.type='time'; inp.value=value||'';
-  inp.oninput=(e)=>onChange(e.target.value);
-  f.appendChild(inp);
+  if(presets && presets.length){
+    const row=el('div','seg');
+    presets.forEach(p=>{
+      const b=el('button','seg-btn'+(value===p?' sel':''));
+      b.textContent=p;
+      b.onclick=()=>onChange(p);
+      row.appendChild(b);
+    });
+    f.appendChild(row);
+  }
+  if(sliderRange){
+    const {min,max,step}=sliderRange;
+    let curMin = timeStrToMinutes(value);
+    if(curMin===null) curMin = Math.round((min+max)/2/step)*step;
+    else if(curMin < min-720) curMin += 1440;
+    curMin = Math.max(min, Math.min(max, curMin));
+    const sw=el('div','slider-wrap');
+    const display=el('div','slider-display'); display.textContent = minutesToTimeStr(curMin);
+    const input=document.createElement('input');
+    input.type='range'; input.min=min; input.max=max; input.step=step; input.value=curMin;
+    input.className='time-slider';
+    input.oninput=(e)=>{ display.textContent = minutesToTimeStr(Number(e.target.value)); };
+    input.onchange=(e)=>{ onChange(minutesToTimeStr(Number(e.target.value))); };
+    sw.append(display,input);
+    f.appendChild(sw);
+    const nativeInp=document.createElement('input');
+    nativeInp.type='time'; nativeInp.value=value||'';
+    nativeInp.style.marginTop='8px';
+    nativeInp.oninput=(e)=>onChange(e.target.value);
+    f.appendChild(nativeInp);
+  } else {
+    const inp=document.createElement('input');
+    inp.type='time'; inp.value=value||'';
+    inp.style.marginTop = presets&&presets.length ? '8px' : '0';
+    inp.oninput=(e)=>onChange(e.target.value);
+    f.appendChild(inp);
+  }
+  container.appendChild(f);
+}
+function chipsField(container,label,options,value,onChange,unit){
+  const f=el('div','field');
+  f.appendChild(elText('label','', label));
+  const row=el('div','seg');
+  options.forEach(opt=>{
+    const b=el('button','seg-btn'+(Number(value)===opt?' sel':''));
+    b.textContent = opt+(unit?' '+unit:'');
+    b.onclick=()=>onChange(opt);
+    row.appendChild(b);
+  });
+  f.appendChild(row);
   container.appendChild(f);
 }
 function stepperField(container,label,value,onChange,min,max,unit){
@@ -549,38 +647,48 @@ function renderEveningForm(key){
     screenTimeMin:0, stress:0
   }, log);
   let step=0;
+  const prevLog = !log.eveningDone ? findPreviousLog(key,'eveningDone') : null;
+  const EVENING_FIELDS = ['bedtime','lastMeal','lateSnack','lateSnackTime','caffeineTime','caffeineAmount','alcohol','alcoholTime','exerciseDone','exerciseTime','exerciseIntensity','screenTimeMin','stress'];
 
   function draw(){
     wrap.innerHTML='';
     wrap.appendChild(elText('div','top-greeting','Buổi tối · '+key));
+    if(prevLog && step===0){
+      const quick=ghostBtn('⚡ Dùng như hôm qua ('+prevLog.date.slice(5)+')', ()=>{
+        EVENING_FIELDS.forEach(f=>{ if(prevLog[f]!==undefined) state[f]=prevLog[f]; });
+        draw();
+      });
+      quick.style.marginBottom='12px';
+      wrap.appendChild(quick);
+    }
     progressDots(wrap,2,step);
     const card=el('div','card');
 
     if(step===0){
       card.appendChild(elText('div','cta-title','Ăn uống & chất kích thích'));
-      timeField(card,'Dự kiến giờ lên giường',state.bedtime,v=>{state.bedtime=v;});
-      timeField(card,'Bữa ăn cuối cùng',state.lastMeal,v=>{state.lastMeal=v;});
+      timeField(card,'Dự kiến giờ lên giường',state.bedtime,v=>{state.bedtime=v;draw();},['22:00','22:30','23:00','23:30','00:00'],{min:1200,max:1620,step:5});
+      timeField(card,'Bữa ăn cuối cùng',state.lastMeal,v=>{state.lastMeal=v;draw();},['18:00','19:00','20:00','21:00'],{min:960,max:1380,step:15});
       segField(card,'Có ăn khuya không?',[{v:'no',l:'Không'},{v:'yes',l:'Có'}],state.lateSnack,v=>{state.lateSnack=v;draw();});
       if(state.lateSnack==='yes'){
         const sub=el('div','subfield'); card.appendChild(sub);
-        timeField(sub,'Giờ ăn khuya',state.lateSnackTime,v=>{state.lateSnackTime=v;});
+        timeField(sub,'Giờ ăn khuya',state.lateSnackTime,v=>{state.lateSnackTime=v;draw();},null,{min:1200,max:1560,step:15});
       }
-      timeField(card,'Giờ uống caffeine cuối cùng (bỏ trống nếu không)',state.caffeineTime,v=>{state.caffeineTime=v;});
-      stepperField(card,'Số ly/tách caffeine hôm nay',state.caffeineAmount,v=>{state.caffeineAmount=v;draw();},0,10,'ly');
+      timeField(card,'Giờ uống caffeine cuối cùng (bỏ trống nếu không)',state.caffeineTime,v=>{state.caffeineTime=v;draw();},['08:00','12:00','14:00','16:00'],{min:360,max:1200,step:15});
+      chipsField(card,'Số ly/tách caffeine hôm nay',[0,1,2,3,4],state.caffeineAmount,v=>{state.caffeineAmount=v;draw();},'ly');
       segField(card,'Có uống rượu bia không?',[{v:'no',l:'Không'},{v:'yes',l:'Có'}],state.alcohol,v=>{state.alcohol=v;draw();});
       if(state.alcohol==='yes'){
         const sub=el('div','subfield'); card.appendChild(sub);
-        timeField(sub,'Giờ uống',state.alcoholTime,v=>{state.alcoholTime=v;});
+        timeField(sub,'Giờ uống',state.alcoholTime,v=>{state.alcoholTime=v;draw();},null,{min:1020,max:1500,step:15});
       }
     } else {
       card.appendChild(elText('div','cta-title','Vận động & tinh thần'));
       segField(card,'Có tập thể dục hôm nay không?',[{v:'no',l:'Không'},{v:'yes',l:'Có'}],state.exerciseDone,v=>{state.exerciseDone=v;draw();});
       if(state.exerciseDone==='yes'){
         const sub=el('div','subfield'); card.appendChild(sub);
-        timeField(sub,'Giờ tập',state.exerciseTime,v=>{state.exerciseTime=v;});
+        timeField(sub,'Giờ tập',state.exerciseTime,v=>{state.exerciseTime=v;draw();},null,{min:300,max:1260,step:15});
         scale5Field(sub,'Cường độ',state.exerciseIntensity,v=>{state.exerciseIntensity=v;draw();});
       }
-      stepperField(card,'Thời gian dùng màn hình trước khi ngủ',state.screenTimeMin,v=>{state.screenTimeMin=v;draw();},0,180,'phút');
+      chipsField(card,'Thời gian dùng màn hình trước khi ngủ',[0,15,30,60,90],state.screenTimeMin,v=>{state.screenTimeMin=v;draw();},'phút');
       scale5Field(card,'Mức độ stress hôm nay',state.stress,v=>{state.stress=v;draw();},['1','2','3','4','5']);
     }
     wrap.appendChild(card);
@@ -609,16 +717,26 @@ function renderMorningForm(key){
   const wrap=el('div');
   const log=getLog(key);
   const state=Object.assign({wakeTime:curTimeStr(), sleepLatency:10, sleepQuality:0, wakeUps:0, energyMorning:0}, log);
+  const prevLog = !log.morningDone ? findPreviousLog(key,'morningDone') : null;
+  const MORNING_FIELDS = ['sleepLatency','sleepQuality','wakeUps','energyMorning'];
 
   function draw(){
     wrap.innerHTML='';
     wrap.appendChild(elText('div','top-greeting','Buổi sáng · đêm '+key));
+    if(prevLog){
+      const quick=ghostBtn('⚡ Dùng như hôm qua', ()=>{
+        MORNING_FIELDS.forEach(f=>{ if(prevLog[f]!==undefined) state[f]=prevLog[f]; });
+        draw();
+      });
+      quick.style.marginBottom='12px';
+      wrap.appendChild(quick);
+    }
     const card=el('div','card');
     card.appendChild(elText('div','cta-title','Đêm qua bạn ngủ thế nào?'));
-    timeField(card,'Giờ dậy',state.wakeTime,v=>{state.wakeTime=v;});
-    stepperField(card,'Mất bao lâu để ngủ được',state.sleepLatency,v=>{state.sleepLatency=v;draw();},0,120,'phút');
+    timeField(card,'Giờ dậy',state.wakeTime,v=>{state.wakeTime=v;draw();},['06:00','06:30','07:00','07:30','08:00'],{min:240,max:660,step:5});
+    chipsField(card,'Mất bao lâu để ngủ được',[0,5,10,15,20,30],state.sleepLatency,v=>{state.sleepLatency=v;draw();},'phút');
     scale5Field(card,'Chất lượng giấc ngủ',state.sleepQuality,v=>{state.sleepQuality=v;draw();});
-    stepperField(card,'Số lần tỉnh giấc giữa đêm',state.wakeUps,v=>{state.wakeUps=v;draw();},0,10);
+    chipsField(card,'Số lần tỉnh giấc giữa đêm',[0,1,2,3,4],state.wakeUps,v=>{state.wakeUps=v;draw();});
     scale5Field(card,'Năng lượng sáng nay',state.energyMorning,v=>{state.energyMorning=v;draw();});
     wrap.appendChild(card);
     const btn=primaryBtn('Lưu',()=>{
@@ -639,18 +757,28 @@ function renderEodForm(key){
   const wrap=el('div');
   const log=getLog(key);
   const state=Object.assign({firstDrowsyTime:'', productivity:0, mood:0, napDone:'no', napMin:0}, log);
+  const prevLog = !log.eodDone ? findPreviousLog(key,'eodDone') : null;
+  const EOD_FIELDS = ['firstDrowsyTime','productivity','mood','napDone','napMin'];
 
   function draw(){
     wrap.innerHTML='';
     wrap.appendChild(elText('div','top-greeting','Cuối ngày · '+key));
+    if(prevLog){
+      const quick=ghostBtn('⚡ Dùng như hôm qua', ()=>{
+        EOD_FIELDS.forEach(f=>{ if(prevLog[f]!==undefined) state[f]=prevLog[f]; });
+        draw();
+      });
+      quick.style.marginBottom='12px';
+      wrap.appendChild(quick);
+    }
     const card=el('div','card');
     card.appendChild(elText('div','cta-title','Hôm nay (kết quả của đêm qua)'));
-    timeField(card,'Mấy giờ bạn bắt đầu thấy mỏi mắt/buồn ngủ?',state.firstDrowsyTime,v=>{state.firstDrowsyTime=v;});
+    timeField(card,'Mấy giờ bạn bắt đầu thấy mỏi mắt/buồn ngủ?',state.firstDrowsyTime,v=>{state.firstDrowsyTime=v;draw();},['13:00','14:00','15:00','16:00'],{min:600,max:1200,step:15});
     scale5Field(card,'Năng suất làm việc hôm nay',state.productivity,v=>{state.productivity=v;draw();});
     scale5Field(card,'Tâm trạng hôm nay',state.mood,v=>{state.mood=v;draw();});
     segField(card,'Có ngủ trưa không?',[{v:'no',l:'Không'},{v:'yes',l:'Có'}],state.napDone,v=>{state.napDone=v;draw();});
     if(state.napDone==='yes'){
-      stepperField(card,'Ngủ trưa bao lâu',state.napMin,v=>{state.napMin=v;draw();},0,180,'phút');
+      chipsField(card,'Ngủ trưa bao lâu',[0,15,30,45,60],state.napMin,v=>{state.napMin=v;draw();},'phút');
     }
     wrap.appendChild(card);
     const btn=primaryBtn('Lưu & hoàn tất hôm nay',()=>{
@@ -684,39 +812,39 @@ function renderEditForm(key){
 
     const c1=el('div','card');
     c1.appendChild(elText('div','cta-title','Buổi tối'));
-    timeField(c1,'Giờ lên giường',state.bedtime,v=>{state.bedtime=v;});
-    timeField(c1,'Bữa ăn cuối cùng',state.lastMeal,v=>{state.lastMeal=v;});
+    timeField(c1,'Giờ lên giường',state.bedtime,v=>{state.bedtime=v;draw();},['22:00','22:30','23:00','23:30','00:00'],{min:1200,max:1620,step:5});
+    timeField(c1,'Bữa ăn cuối cùng',state.lastMeal,v=>{state.lastMeal=v;draw();},['18:00','19:00','20:00','21:00'],{min:960,max:1380,step:15});
     segField(c1,'Ăn khuya?',[{v:'no',l:'Không'},{v:'yes',l:'Có'}],state.lateSnack,v=>{state.lateSnack=v;draw();});
-    if(state.lateSnack==='yes') timeField(c1,'Giờ ăn khuya',state.lateSnackTime,v=>{state.lateSnackTime=v;});
-    timeField(c1,'Giờ caffeine cuối',state.caffeineTime,v=>{state.caffeineTime=v;});
-    stepperField(c1,'Số ly caffeine',state.caffeineAmount,v=>{state.caffeineAmount=v;draw();},0,10,'ly');
+    if(state.lateSnack==='yes') timeField(c1,'Giờ ăn khuya',state.lateSnackTime,v=>{state.lateSnackTime=v;draw();},null,{min:1200,max:1560,step:15});
+    timeField(c1,'Giờ caffeine cuối',state.caffeineTime,v=>{state.caffeineTime=v;draw();},['08:00','12:00','14:00','16:00'],{min:360,max:1200,step:15});
+    chipsField(c1,'Số ly caffeine',[0,1,2,3,4],state.caffeineAmount,v=>{state.caffeineAmount=v;draw();},'ly');
     segField(c1,'Rượu bia?',[{v:'no',l:'Không'},{v:'yes',l:'Có'}],state.alcohol,v=>{state.alcohol=v;draw();});
-    if(state.alcohol==='yes') timeField(c1,'Giờ uống',state.alcoholTime,v=>{state.alcoholTime=v;});
+    if(state.alcohol==='yes') timeField(c1,'Giờ uống',state.alcoholTime,v=>{state.alcoholTime=v;draw();},null,{min:1020,max:1500,step:15});
     segField(c1,'Tập thể dục?',[{v:'no',l:'Không'},{v:'yes',l:'Có'}],state.exerciseDone,v=>{state.exerciseDone=v;draw();});
     if(state.exerciseDone==='yes'){
-      timeField(c1,'Giờ tập',state.exerciseTime,v=>{state.exerciseTime=v;});
+      timeField(c1,'Giờ tập',state.exerciseTime,v=>{state.exerciseTime=v;draw();},null,{min:300,max:1260,step:15});
       scale5Field(c1,'Cường độ',state.exerciseIntensity,v=>{state.exerciseIntensity=v;draw();});
     }
-    stepperField(c1,'Screen time trước ngủ',state.screenTimeMin,v=>{state.screenTimeMin=v;draw();},0,180,'phút');
+    chipsField(c1,'Screen time trước ngủ',[0,15,30,60,90],state.screenTimeMin,v=>{state.screenTimeMin=v;draw();},'phút');
     scale5Field(c1,'Stress',state.stress,v=>{state.stress=v;draw();});
     wrap.appendChild(c1);
 
     const c2=el('div','card');
     c2.appendChild(elText('div','cta-title','Buổi sáng'));
-    timeField(c2,'Giờ dậy',state.wakeTime,v=>{state.wakeTime=v;});
-    stepperField(c2,'Thời gian vào giấc',state.sleepLatency,v=>{state.sleepLatency=v;draw();},0,120,'phút');
+    timeField(c2,'Giờ dậy',state.wakeTime,v=>{state.wakeTime=v;draw();},['06:00','06:30','07:00','07:30','08:00'],{min:240,max:660,step:5});
+    chipsField(c2,'Thời gian vào giấc',[0,5,10,15,20,30],state.sleepLatency,v=>{state.sleepLatency=v;draw();},'phút');
     scale5Field(c2,'Chất lượng ngủ',state.sleepQuality,v=>{state.sleepQuality=v;draw();});
-    stepperField(c2,'Số lần tỉnh giấc',state.wakeUps,v=>{state.wakeUps=v;draw();},0,10);
+    chipsField(c2,'Số lần tỉnh giấc',[0,1,2,3,4],state.wakeUps,v=>{state.wakeUps=v;draw();});
     scale5Field(c2,'Năng lượng sáng',state.energyMorning,v=>{state.energyMorning=v;draw();});
     wrap.appendChild(c2);
 
     const c3=el('div','card');
     c3.appendChild(elText('div','cta-title','Cuối ngày'));
-    timeField(c3,'Giờ mỏi mắt đầu tiên',state.firstDrowsyTime,v=>{state.firstDrowsyTime=v;});
+    timeField(c3,'Giờ mỏi mắt đầu tiên',state.firstDrowsyTime,v=>{state.firstDrowsyTime=v;draw();},['13:00','14:00','15:00','16:00'],{min:600,max:1200,step:15});
     scale5Field(c3,'Năng suất',state.productivity,v=>{state.productivity=v;draw();});
     scale5Field(c3,'Tâm trạng',state.mood,v=>{state.mood=v;draw();});
     segField(c3,'Ngủ trưa?',[{v:'no',l:'Không'},{v:'yes',l:'Có'}],state.napDone,v=>{state.napDone=v;draw();});
-    if(state.napDone==='yes') stepperField(c3,'Ngủ trưa bao lâu',state.napMin,v=>{state.napMin=v;draw();},0,180,'phút');
+    if(state.napDone==='yes') chipsField(c3,'Ngủ trưa bao lâu',[0,15,30,45,60],state.napMin,v=>{state.napMin=v;draw();},'phút');
     wrap.appendChild(c3);
 
     wrap.appendChild(primaryBtn('Lưu thay đổi', ()=>{
