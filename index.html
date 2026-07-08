@@ -111,6 +111,16 @@
     background:linear-gradient(135deg, rgba(74,108,247,.18), rgba(139,92,246,.12));
     border:1px solid rgba(139,92,246,.35);
   }
+  .box-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;}
+  .box{
+    background:var(--navy-surface);border:1px solid var(--navy-line);
+    border-radius:14px;padding:16px 6px;text-align:center;cursor:pointer;
+  }
+  .box.done{border-color:var(--good);background:linear-gradient(135deg, rgba(95,216,166,.12), transparent);}
+  .box .box-ic{font-size:22px;display:block;margin-bottom:6px;}
+  .box .box-label{font-size:12px;font-weight:600;}
+  .box .box-status{font-size:10px;color:var(--muted);margin-top:4px;}
+  .box.done .box-status{color:var(--good);font-weight:600;}
   .cta-label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;}
   .cta-title{font-family:var(--font-display);font-size:19px;font-weight:600;margin-bottom:12px;}
   .row{display:flex;gap:10px;}
@@ -284,6 +294,12 @@ function findPending(){
   return null;
 }
 
+function currentSessionKey(){
+  const pending = findPending();
+  if(pending) return pending.key;
+  return eveningSessionKey();
+}
+
 function decideContext(){
   const h = new Date().getHours();
   const pending = findPending();
@@ -392,7 +408,6 @@ function computeDuration(l){
 
 /* ---------------- Home ---------------- */
 function renderHome(){
-  const c = decideContext();
   const wrap = el('div');
   const greetings = greetingNow();
   wrap.innerHTML = `<div class="top-greeting">${greetings}</div><div class="top-date">${niceDate(new Date())}</div>`;
@@ -404,21 +419,14 @@ function renderHome(){
   for(let i=keys.length-1;i>=0;i--){ if(logs[keys[i]].morningDone){ lastFull=logs[keys[i]]; lastFull.durationH=computeDuration(lastFull); break; } }
   wrap.appendChild(dayRing(lastFull));
 
-  // CTA card
-  const cta = el('div','card cta');
-  if(c.type==='evening'){
-    cta.innerHTML = `<div class="cta-label">Sắp ngủ</div><div class="cta-title">Ghi lại buổi tối nay</div>`;
-    cta.appendChild(primaryBtn('Bắt đầu (~45 giây)', ()=>nav({name:'evening',key:c.key})));
-  } else if(c.type==='morning'){
-    cta.innerHTML = `<div class="cta-label">Mới dậy</div><div class="cta-title">Ghi lại giấc ngủ đêm qua</div>`;
-    cta.appendChild(primaryBtn('Bắt đầu (~20 giây)', ()=>nav({name:'morning',key:c.key})));
-  } else if(c.type==='eod'){
-    cta.innerHTML = `<div class="cta-label">Cuối ngày</div><div class="cta-title">Hôm nay thế nào?</div>`;
-    cta.appendChild(primaryBtn('Bắt đầu (~20 giây)', ()=>nav({name:'eod',key:c.key})));
-  } else {
-    cta.innerHTML = `<div class="cta-label">Hoàn tất</div><div class="cta-title">Đã ghi đủ hôm nay ✓</div><div class="hint">Quay lại vào buổi tối để ghi tiếp.</div>`;
-  }
-  wrap.appendChild(cta);
+  // 3 box cho 3 form — luôn hiện đủ, không đoán/ẩn để tránh sai trạng thái
+  const sessKey = currentSessionKey();
+  const sessLog = getLog(sessKey);
+  const boxRow = el('div','box-row');
+  boxRow.appendChild(formBox('🌙','Buổi tối', sessLog.eveningDone, ()=>nav({name:'evening',key:sessKey})));
+  boxRow.appendChild(formBox('☀️','Buổi sáng', sessLog.morningDone, ()=>nav({name:'morning',key:sessKey})));
+  boxRow.appendChild(formBox('📝','Cuối ngày', sessLog.eodDone, ()=>nav({name:'eod',key:sessKey})));
+  wrap.appendChild(boxRow);
 
   // stats
   const stats = el('div','card');
@@ -439,6 +447,13 @@ function renderHome(){
   wrap.appendChild(note);
 
   return wrap;
+}
+
+function formBox(icon, label, done, onClick){
+  const b = el('div','box'+(done?' done':''));
+  b.innerHTML = `<span class="box-ic">${icon}</span><div class="box-label">${label}</div><div class="box-status">${done?'✓ Đã ghi':'Chưa ghi'}</div>`;
+  b.onclick = onClick;
+  return b;
 }
 
 function computeStreak(logs){
